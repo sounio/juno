@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    app_name: str = "Vela"
+    app_name: str = "Juno"
     debug: bool = True
 
     # LLM Configuration

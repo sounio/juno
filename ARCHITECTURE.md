@@ -1,4 +1,4 @@
-# Vela - Personal AI Assistant Architecture
+# Juno - Personal AI Assistant Architecture
 
 ## Overview
 

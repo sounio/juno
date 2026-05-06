@@ -1,7 +1,13 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+const nextConfig = {
+  output: "standalone",
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [{ key: "Content-Type", value: "application/javascript" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

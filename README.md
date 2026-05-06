@@ -1,4 +1,4 @@
-vela/
+juno/
 ├── api/                 # API Gateway (FastAPI + WebSocket)
 ├── core/                # Multi-Agent System (LangGraph)
 ├── mcp/                 # MCP Protocol Layer
@@ -15,7 +15,7 @@ vela/
 ## Quick Start
 
 ```bash
-cd vela/
+cd juno/
 
 # Backend
 pip install -r requirements.txt

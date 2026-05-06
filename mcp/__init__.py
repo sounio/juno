@@ -71,6 +71,6 @@ class MCPRegistry:
 
 
 class MCPServer:
-    def __init__(self, name: str = "vela-mcp"):
+    def __init__(self, name: str = "juno-mcp"):
         self.name = name
         self.registry = MCPRegistry
