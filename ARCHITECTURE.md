@@ -1,0 +1,85 @@
+# Vela - Personal AI Assistant Architecture
+
+## Overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Client Layer                          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  │
+│  │ Web      │  │ iOS      │  │ Android  │  │ Watch  │  │
+│  │ (Next.js)│  │ (Swift)  │  │ (Kotlin) │  │ (Wear) │  │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └───┬────┘  │
+│       └──────────────┴─────────────┴────────────┘       │
+│                       │ WebSocket / HTTP                 │
+├───────────────────────┼──────────────────────────────────┤
+│            API Gateway (FastAPI)                         │
+├───────────────────────┼──────────────────────────────────┤
+│                    Event Bus (Redis Pub/Sub)             │
+├───────────────┬───────┴───────────┬──────────────────────┤
+│  Agent System │   MCP Protocol    │   Edge Engine        │
+│  (LangGraph)  │   Layer           │   (MLX/Ollama)       │
+│               │                   │                      │
+│  ┌─────────┐  │  ┌─────────────┐  │  ┌──────────────┐   │
+│  │Orchstrtr│  │  │ MCP Server  │  │  │ MLX Runtime  │   │
+│  ├─────────┤  │  ├─────────────┤  │  ├──────────────┤   │
+│  │Conv     │  │  │ Tool Reg    │  │  │ OllamaBridge │   │
+│  │Knowledge│  │  │ Stdio/SSE   │  │  │ Model Manager│   │
+│  │Task     │  │  │ Streamable  │  │  └──────────────┘   │
+│  │Device   │  │  └─────────────┘  │                      │
+│  └─────────┘  │                   │                      │
+├───────────────┴───────────────────┴──────────────────────┤
+│                    Memory & Storage                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐ │
+│  │ Short-   │  │ Long-    │  │ Vector   │  │ File     │ │
+│  │ term     │  │ term     │  │ Store    │  │ Store    │ │
+│  │ (Redis)  │  │ (SQLite) │  │(ChromaDB)│  │ (Local)  │ │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘ │
+└──────────────────────────────────────────────────────────┘
+```
+
+## Core Concepts
+
+### 1. Multi-Agent System (LangGraph)
+- **OrchestratorAgent**: Routes requests, manages context, coordinates sub-agents
+- **ConversationAgent**: NLU, dialog management, response generation
+- **KnowledgeAgent**: RAG, document indexing, semantic search
+- **TaskAgent**: Task planning, scheduling, automation execution
+- **DeviceAgent**: Cross-device state sync, notifications, device control
+
+### 2. MCP Protocol Layer
+Standard Model Context Protocol for tool integration:
+- MCP Server (Python SDK)
+- Tools: web search, file ops, code exec, calendar, email, etc.
+- Skills: Hot-pluggable capability modules
+
+### 3. Edge Engine
+- MLX (Apple Silicon) for on-device inference
+- Ollama bridge for local LLMs
+- Automatic model fallback (edge → cloud)
+
+### 4. Skills System
+Lightweight plugin system inspired by QwenPaw/Claude Code:
+- Manifest-based (skill.yaml)
+- Instructions + tools + config
+- Community sharable format
+
+## Data Flow
+
+```
+User Input → API Gateway → Event Bus → Orchestrator
+                                         │
+                          ┌──────────────┼──────────────┐
+                          ▼              ▼              ▼
+                   Conversation    Knowledge      Task/Device
+                    Agent          Agent           Agent
+                          │              │              │
+                          └──────────────┼──────────────┘
+                                         ▼
+                                    MCP Tools
+                                         │
+                                         ▼
+                                    Edge/Cloud LLM
+                                         │
+                                         ▼
+                                    Response → User
+```

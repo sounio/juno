@@ -1,0 +1,15 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+langgraph==0.2.60
+langchain-core==0.3.29
+pydantic==2.10.3
+pydantic-settings==2.7.0
+httpx==0.28.1
+websockets==14.1
+chromadb==0.5.23
+pyyaml==6.0.2
+aiosqlite==0.20.0
+# Edge / On-device
+# mlx-lm (Apple Silicon, optional)
+# ollama (via httpx)
+python-multipart==0.0.19
