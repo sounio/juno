@@ -1,7 +1,7 @@
 "use client";
 
-import { createWebSocket, apiPost } from "@/lib/api";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
+import { useState, useCallback, useRef } from "react";
 
 export interface Message {
   id: string;
@@ -13,81 +13,89 @@ export interface Message {
 export function useJuno() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const sessionIdRef = useRef<string>(crypto.randomUUID());
+  const abortRef = useRef<AbortController | null>(null);
 
-  const connect = useCallback(() => {
-    const ws = createWebSocket();
-    ws.onopen = () => setIsConnected(true);
-    ws.onclose = () => setIsConnected(false);
-    ws.onerror = () => setIsConnected(false);
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "response" && data.data?.metadata?.response) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: data.data.metadata.response,
-              timestamp: Date.now(),
-            },
-          ]);
-          setIsLoading(false);
-        }
-      } catch {}
+  const sendMessage = useCallback(async (content: string) => {
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+      timestamp: Date.now(),
     };
-    wsRef.current = ws;
+
+    const assistantId = crypto.randomUUID();
+    const assistantMsg: Message = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      timestamp: Date.now(),
+    };
+
+    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setIsLoading(true);
+
+    const history = [...messages, userMsg].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const resp = await fetch(`${API_BASE}/agent/chat/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history }),
+        signal: controller.signal,
+      });
+
+      const reader = resp.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const token = line.slice(6);
+            if (token === "[DONE]") continue;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, content: m.content + token }
+                  : m
+              )
+            );
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.error("Stream error:", err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: m.content || "Error: failed to get response" }
+              : m
+          )
+        );
+      }
+    } finally {
+      setIsLoading(false);
+      abortRef.current = null;
+    }
+  }, [messages]);
+
+  const stopGeneration = useCallback(() => {
+    abortRef.current?.abort();
   }, []);
 
-  const sendMessage = useCallback(
-    async (content: string) => {
-      const userMsg: Message = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, userMsg]);
-      setIsLoading(true);
-
-      const history = [...messages, userMsg].map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      try {
-        const result = await apiPost("/agent/chat", {
-          messages: history,
-          user_id: "web",
-          device_id: "web",
-        });
-        if (result?.metadata?.response) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: result.metadata.response,
-              timestamp: Date.now(),
-            },
-          ]);
-        }
-      } catch (err) {
-        console.error("Chat error:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [messages]
-  );
-
-  useEffect(() => {
-    connect();
-    return () => wsRef.current?.close();
-  }, [connect]);
-
-  return { messages, sendMessage, isLoading, isConnected, sessionId: sessionIdRef.current };
+  return { messages, sendMessage, isLoading, stopGeneration };
 }

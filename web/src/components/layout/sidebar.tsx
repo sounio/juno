@@ -3,18 +3,12 @@
 export function Sidebar({
   open,
   onToggle,
-  sessionId,
   isConnected,
 }: {
   open: boolean;
   onToggle: () => void;
-  sessionId: string;
   isConnected: boolean;
 }) {
-  const sessions = [
-    { id: sessionId, title: "Current Session", active: true },
-  ];
-
   return (
     <>
       {open && (
@@ -47,21 +41,15 @@ export function Sidebar({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          {sessions.map((s) => (
-            <button
-              key={s.id}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                s.active
-                  ? "bg-neutral-800 text-neutral-100"
-                  : "text-neutral-400 hover:bg-neutral-800/50"
-              }`}
-            >
-              <div className="truncate">{s.title}</div>
-            </button>
-          ))}
+          <div className="px-3 py-2 text-xs text-neutral-500 uppercase tracking-wider">
+            Sessions
+          </div>
+          <button className="w-full text-left px-3 py-2 rounded-lg text-sm bg-neutral-800 text-neutral-100 transition-colors">
+            <div className="truncate">Current Session</div>
+          </button>
         </div>
 
-        <div className="p-3 border-t border-neutral-800 space-y-2">
+        <div className="p-3 border-t border-neutral-800">
           <div className="flex items-center gap-2 px-3 py-2 text-xs text-neutral-500">
             <span className={`inline-block w-1.5 h-1.5 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
             {isConnected ? "Connected" : "Disconnected"}

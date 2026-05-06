@@ -60,10 +60,8 @@ class Orchestrator:
         target_role = self._resolve_agent(intent, state)
         state["current_agent"] = target_role
 
-        agent = self.agents.get(target_role)
-        if agent:
-            state = await agent.process(state)
-
+        # Orchestrator only routes — agent processing happens in LangGraph nodes
+        state["metadata"]["routed_to"] = target_role.value
         return state
 
     def _classify_intent(self, message: str, state: AgentState) -> str:

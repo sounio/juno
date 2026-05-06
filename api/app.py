@@ -2,11 +2,13 @@
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 from shared.config import settings
 from mcp import MCPRegistry, MCPServer
 import mcp.tools.builtin
 from core.agents.workflow import graph
+from core.llm import get_llm
 
 
 @asynccontextmanager
@@ -65,6 +67,28 @@ async def agent_chat(payload: dict):
 
     result = await graph.ainvoke(state)
     return result
+
+
+@app.post("/agent/chat/stream")
+async def agent_chat_stream(payload: dict):
+    messages = payload.get("messages", [])
+
+    async def event_stream():
+        llm = get_llm()
+        async for token in llm.chat_stream(messages):
+            if token:
+                yield f"data: {token}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.websocket("/ws")
